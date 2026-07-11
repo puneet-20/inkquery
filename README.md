@@ -9,17 +9,17 @@ A full-stack RAG (Retrieval-Augmented Generation) application that lets users up
 - **Frontend:** React (Vite)
 - **Backend:** Node.js, Express
 - **Database / Vector Store:** Supabase (Postgres + pgvector)
-- **AI:** OpenAI API (`text-embedding-3-small` for embeddings, `gpt-4o-mini` for chat)
+- **AI:** Google Gemini API (`text-embedding-004` for embeddings, `gemini-1.5-flash` for chat) — free tier, no billing required
 - **Auth:** Supabase Auth
 - **Deployment:** Vercel (frontend), Render (backend)
 
 ## How it works
 1. User uploads a PDF.
 2. Backend extracts text and splits it into chunks.
-3. Each chunk is converted into an embedding (vector) via OpenAI and stored in Supabase (pgvector).
+3. Each chunk is converted into an embedding (vector) via Gemini and stored in Supabase (pgvector).
 4. When a user asks a question, the question is embedded the same way.
 5. Supabase finds the most semantically similar chunks to the question.
-6. Those chunks + the question are sent to GPT, which answers using only that context.
+6. Those chunks + the question are sent to Gemini, which answers using only that context.
 
 ## Progress Log
 - [x] Day 1: Repo setup, Supabase project, Express server skeleton, folder structure
@@ -36,7 +36,7 @@ A full-stack RAG (Retrieval-Augmented Generation) application that lets users up
 ```bash
 cd backend
 npm install
-cp .env.example .env   # then fill in your real Supabase + OpenAI keys
+cp .env.example .env   # then fill in your real Supabase + Gemini keys
 npm run dev
 ```
 Visit `http://localhost:5000/health` to confirm it's running.

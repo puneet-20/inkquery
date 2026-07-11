@@ -12,18 +12,18 @@ create table documents (
 );
 
 -- 3. Table to store text chunks + their embeddings
--- text-embedding-3-small produces vectors of size 1536
+-- Gemini's text-embedding-004 produces vectors of size 768
 create table chunks (
   id uuid primary key default gen_random_uuid(),
   document_id uuid references documents(id) on delete cascade not null,
   content text not null,
-  embedding vector(1536),
+  embedding vector(768),
   created_at timestamp with time zone default now()
 );
 
 -- 4. Function to search for the most similar chunks to a given question embedding
 create or replace function match_chunks (
-  query_embedding vector(1536),
+  query_embedding vector(768),
   match_document_id uuid,
   match_count int default 5
 )
