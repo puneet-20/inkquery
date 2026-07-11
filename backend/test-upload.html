@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>InkQuery - Day 2 Upload Test</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+  h1 { font-size: 20px; }
+  pre { background: #f4f4f4; padding: 16px; border-radius: 8px; white-space: pre-wrap; word-break: break-word; }
+  button { padding: 8px 16px; margin-top: 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+  <h1>InkQuery - Day 2: PDF Upload Test</h1>
+  <p>Pick a PDF file, click upload, and check that the backend extracted its text correctly.</p>
+
+  <input type="file" id="fileInput" accept="application/pdf" />
+  <br />
+  <button id="uploadBtn">Upload</button>
+
+  <h3>Response:</h3>
+  <pre id="output">(nothing yet)</pre>
+
+  <script>
+    document.getElementById('uploadBtn').addEventListener('click', async () => {
+      const fileInput = document.getElementById('fileInput');
+      const output = document.getElementById('output');
+
+      if (!fileInput.files.length) {
+        output.textContent = 'Please choose a PDF file first.';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      output.textContent = 'Uploading...';
+
+      try {
+        const response = await fetch('http://localhost:5000/api/documents/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = 'Error: ' + err.message + '\n\nMake sure your backend server is running on port 5000.';
+      }
+    });
+  </script>
+</body>
+</html>

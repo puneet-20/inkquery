@@ -23,7 +23,7 @@ A full-stack RAG (Retrieval-Augmented Generation) application that lets users up
 
 ## Progress Log
 - [x] Day 1: Repo setup, Supabase project, Express server skeleton, folder structure
-- [ ] Day 2: PDF upload + text extraction
+- [x] Day 2: PDF upload + text extraction
 - [ ] Day 3: Chunking + embeddings + storage in Supabase
 - [ ] Day 4: Similarity search / retrieval
 - [ ] Day 5: GPT answer generation + chat UI
