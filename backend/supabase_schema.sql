@@ -4,9 +4,11 @@
 create extension if not exists vector;
 
 -- 2. Table to store uploaded documents
+-- Note: user_id is nullable for now since auth isn't built until Day 6.
+-- Once auth exists, we'll backfill this and make it required again.
 create table documents (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) not null,
+  user_id uuid references auth.users(id),
   filename text not null,
   created_at timestamp with time zone default now()
 );

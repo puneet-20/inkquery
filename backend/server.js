@@ -1,7 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import dns from 'node:dns';
 import documentsRouter from './routes/documents.js';
+
+// Fix for a common Windows/Node issue where newer Node versions fail to
+// resolve some domains (like Supabase's) even though the browser can reach
+// them fine. Forcing IPv4-first resolution fixes it.
+dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 
