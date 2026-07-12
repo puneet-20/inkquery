@@ -2,36 +2,108 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>InkQuery - Full Test</title>
+<title>InkQuery - Full Test (with Auth)</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
   h1 { font-size: 20px; }
   h2 { font-size: 16px; margin-top: 30px; }
   pre { background: #f4f4f4; padding: 16px; border-radius: 8px; white-space: pre-wrap; word-break: break-word; }
   button { padding: 8px 16px; margin-top: 10px; cursor: pointer; }
-  input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; margin-top: 8px; }
+  input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; margin-top: 8px; }
   .chat-answer { background: #eef6ff; padding: 16px; border-radius: 8px; margin-top: 10px; white-space: pre-wrap; }
   .source { background: #f9f9f9; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 13px; color: #555; }
-  #documentInfo { font-size: 14px; color: #333; margin-top: 10px; }
+  #documentInfo, #authStatus { font-size: 14px; color: #333; margin-top: 10px; }
+  #mainApp { display: none; }
+  .hint { font-size: 12px; color: #888; }
 </style>
 </head>
 <body>
   <h1>InkQuery - Full Pipeline Test</h1>
 
-  <h2>Step 1: Upload a PDF</h2>
-  <input type="file" id="fileInput" accept="application/pdf" />
-  <br />
-  <button id="uploadBtn">Upload</button>
-  <div id="documentInfo"></div>
+  <!-- ===== CONFIG: fill these in below ===== -->
+  <!-- Get these from Supabase -> Settings -> API -->
 
-  <h2>Step 2: Ask a question about it</h2>
-  <input type="text" id="questionInput" placeholder="e.g. What is this document about?" disabled />
-  <button id="askBtn" disabled>Ask</button>
+  <div id="authSection">
+    <h2>Step 0: Log in</h2>
+    <p class="hint">First time? Just enter any email + password (6+ characters) and click Sign Up. Then use the same to log in next time.</p>
+    <input type="email" id="emailInput" placeholder="you@example.com" />
+    <input type="password" id="passwordInput" placeholder="password" />
+    <button id="signupBtn">Sign Up</button>
+    <button id="loginBtn">Log In</button>
+    <div id="authStatus"></div>
+  </div>
 
-  <div id="answerBox"></div>
+  <div id="mainApp">
+    <p id="loggedInAs"></p>
+    <button id="logoutBtn">Log Out</button>
+
+    <h2>Step 1: Upload a PDF</h2>
+    <input type="file" id="fileInput" accept="application/pdf" />
+    <br />
+    <button id="uploadBtn">Upload</button>
+    <div id="documentInfo"></div>
+
+    <h2>Step 2: Ask a question about it</h2>
+    <input type="text" id="questionInput" placeholder="e.g. What is this document about?" disabled />
+    <button id="askBtn" disabled>Ask</button>
+
+    <div id="answerBox"></div>
+  </div>
 
   <script>
+    // ===== FILL THESE IN with your own Supabase project details =====
+    const SUPABASE_URL = 'https://jvgjuxzvnkautdxnesdn.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2Z2p1eHp2bmthdXRkeG5lc2RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MDkwNjQsImV4cCI6MjA5OTE4NTA2NH0.B2zZXSG3otFbgDQ58bn1XAV5GezI0sYTzUdayfembxw';
+
+    // ===================================================================
+
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     let currentDocumentId = null;
+    let accessToken = null;
+
+    function showApp(user) {
+      document.getElementById('authSection').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      document.getElementById('loggedInAs').textContent = 'Logged in as: ' + user.email;
+    }
+
+    function showAuth() {
+      document.getElementById('authSection').style.display = 'block';
+      document.getElementById('mainApp').style.display = 'none';
+    }
+
+    document.getElementById('signupBtn').addEventListener('click', async () => {
+      const email = document.getElementById('emailInput').value;
+      const password = document.getElementById('passwordInput').value;
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+      const status = document.getElementById('authStatus');
+      if (error) {
+        status.textContent = 'Error: ' + error.message;
+      } else {
+        status.textContent = 'Signed up! If email confirmation is off, you can now log in.';
+      }
+    });
+
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const email = document.getElementById('emailInput').value;
+      const password = document.getElementById('passwordInput').value;
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      const status = document.getElementById('authStatus');
+      if (error) {
+        status.textContent = 'Error: ' + error.message;
+        return;
+      }
+      accessToken = data.session.access_token;
+      showApp(data.user);
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      accessToken = null;
+      showAuth();
+    });
 
     document.getElementById('uploadBtn').addEventListener('click', async () => {
       const fileInput = document.getElementById('fileInput');
@@ -50,6 +122,7 @@
       try {
         const response = await fetch('http://localhost:5000/api/documents/upload', {
           method: 'POST',
+          headers: { Authorization: 'Bearer ' + accessToken },
           body: formData,
         });
         const data = await response.json();
@@ -85,7 +158,10 @@
       try {
         const response = await fetch('http://localhost:5000/api/documents/ask', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + accessToken,
+          },
           body: JSON.stringify({ documentId: currentDocumentId, question }),
         });
         const data = await response.json();

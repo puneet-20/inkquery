@@ -4,6 +4,7 @@ import pdfParse from 'pdf-parse';
 import { chunkText } from '../utils/chunkText.js';
 import { embedText, generateAnswer } from '../utils/geminiClient.js';
 import { supabase } from '../utils/supabaseClient.js';
+import { requireAuth } from '../utils/authMiddleware.js';
 
 const router = express.Router();
 
@@ -13,7 +14,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Day 2: accept a PDF upload, extract its text.
 // Day 3: chunk the text, embed each chunk, and store everything in Supabase.
-router.post('/upload', upload.single('file'), async (req, res) => {
+// Day 6: require login, and tie the document to the logged-in user.
+router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded. Send a PDF using the "file" field.' });
@@ -31,10 +33,10 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Could not find any readable text in this PDF.' });
     }
 
-    // Step 2: create a document record (user_id left null until auth exists - Day 6)
+    // Step 2: create a document record, owned by the logged-in user
     const { data: document, error: docError } = await supabase
       .from('documents')
-      .insert({ filename: req.file.originalname })
+      .insert({ filename: req.file.originalname, user_id: req.user.id })
       .select()
       .single();
 
@@ -73,14 +75,42 @@ router.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+// Returns the logged-in user's own documents (for a document picker UI later).
+router.get('/', requireAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from('documents')
+    .select('id, filename, created_at')
+    .eq('user_id', req.user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ documents: data });
+});
+
 // Day 4-5: accept a question about a specific document, retrieve the most
 // relevant chunks, and ask Gemini to answer using only that context.
-router.post('/ask', async (req, res) => {
+// Day 6: require login, and make sure the document actually belongs to this user.
+router.post('/ask', requireAuth, async (req, res) => {
   try {
     const { documentId, question } = req.body;
 
     if (!documentId || !question) {
       return res.status(400).json({ error: 'Please provide both "documentId" and "question".' });
+    }
+
+    // Ownership check: make sure this document belongs to the logged-in user
+    const { data: document, error: docError } = await supabase
+      .from('documents')
+      .select('id, user_id')
+      .eq('id', documentId)
+      .single();
+
+    if (docError || !document) {
+      return res.status(404).json({ error: 'Document not found.' });
+    }
+
+    if (document.user_id !== req.user.id) {
+      return res.status(403).json({ error: "You don't have access to this document." });
     }
 
     // Step 1: embed the question (using RETRIEVAL_QUERY, since this is a search query,

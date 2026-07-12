@@ -4,8 +4,10 @@
 create extension if not exists vector;
 
 -- 2. Table to store uploaded documents
--- Note: user_id is nullable for now since auth isn't built until Day 6.
--- Once auth exists, we'll backfill this and make it required again.
+-- user_id is nullable for now to allow old test rows without a real user.
+-- Once you've cleared out test data, you can run:
+--   alter table documents alter column user_id set not null;
+-- to fully enforce ownership.
 create table documents (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id),

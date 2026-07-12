@@ -27,7 +27,7 @@ A full-stack RAG (Retrieval-Augmented Generation) application that lets users up
 - [x] Day 3: Chunking + embeddings + storage in Supabase
 - [x] Day 4: Similarity search / retrieval
 - [x] Day 5: GPT answer generation + chat UI
-- [ ] Day 6: Auth + polish
+- [x] Day 6: Auth + polish
 - [ ] Day 7: Deployment
 
 ## Local Setup
