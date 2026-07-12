@@ -9,7 +9,7 @@ A full-stack RAG (Retrieval-Augmented Generation) application that lets users up
 - **Frontend:** React (Vite)
 - **Backend:** Node.js, Express
 - **Database / Vector Store:** Supabase (Postgres + pgvector)
-- **AI:** Google Gemini API (`text-embedding-004` for embeddings, `gemini-1.5-flash` for chat) — free tier, no billing required
+- **AI:** Google Gemini API (`gemini-embedding-001` for embeddings, `gemini-flash-latest` for chat) — free tier, no billing required
 - **Auth:** Supabase Auth
 - **Deployment:** Vercel (frontend), Render (backend)
 
@@ -43,6 +43,15 @@ Visit `http://localhost:5000/health` to confirm it's running.
 
 ### Database
 Run `backend/supabase_schema.sql` in your Supabase project's SQL Editor to set up tables and the vector search function.
+
+### Frontend
+```bash
+cd frontend
+npm install
+cp .env.example .env   # then fill in your Supabase + backend API URL
+npm run dev
+```
+Visit `http://localhost:5173` to use the app.
 
 ## Planned future improvements
 - Multi-document support
