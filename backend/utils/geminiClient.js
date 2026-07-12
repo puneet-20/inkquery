@@ -8,7 +8,7 @@ export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 // Model names as of mid-2026. Google occasionally renames/deprecates models,
 // so if these ever 404 again, check https://ai.google.dev/gemini-api/docs/models
 export const EMBEDDING_MODEL = 'gemini-embedding-001';
-export const CHAT_MODEL = 'gemini-2.5-flash';
+export const CHAT_MODEL = 'gemini-flash-latest';
 
 // Turns a piece of text into a 768-number embedding (matches our Supabase schema).
 export async function embedText(text, taskType = 'RETRIEVAL_DOCUMENT') {
@@ -21,4 +21,26 @@ export async function embedText(text, taskType = 'RETRIEVAL_DOCUMENT') {
     },
   });
   return response.embeddings[0].values;
+}
+
+// Sends the question + retrieved context chunks to Gemini and returns a plain-text answer.
+export async function generateAnswer(question, contextChunks) {
+  const context = contextChunks.join('\n\n---\n\n');
+
+  const prompt = `You are answering a question using ONLY the context below, taken from a document the user uploaded.
+If the answer isn't in the context, say you don't know based on the document - do not make anything up.
+
+Context:
+${context}
+
+Question: ${question}
+
+Answer:`;
+
+  const response = await ai.models.generateContent({
+    model: CHAT_MODEL,
+    contents: prompt,
+  });
+
+  return response.text;
 }

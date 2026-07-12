@@ -25,8 +25,8 @@ A full-stack RAG (Retrieval-Augmented Generation) application that lets users up
 - [x] Day 1: Repo setup, Supabase project, Express server skeleton, folder structure
 - [x] Day 2: PDF upload + text extraction
 - [x] Day 3: Chunking + embeddings + storage in Supabase
-- [ ] Day 4: Similarity search / retrieval
-- [ ] Day 5: GPT answer generation + chat UI
+- [x] Day 4: Similarity search / retrieval
+- [x] Day 5: GPT answer generation + chat UI
 - [ ] Day 6: Auth + polish
 - [ ] Day 7: Deployment
 

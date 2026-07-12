@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>InkQuery - Full Test</title>
+<style>
+  body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 16px; margin-top: 30px; }
+  pre { background: #f4f4f4; padding: 16px; border-radius: 8px; white-space: pre-wrap; word-break: break-word; }
+  button { padding: 8px 16px; margin-top: 10px; cursor: pointer; }
+  input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; margin-top: 8px; }
+  .chat-answer { background: #eef6ff; padding: 16px; border-radius: 8px; margin-top: 10px; white-space: pre-wrap; }
+  .source { background: #f9f9f9; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 13px; color: #555; }
+  #documentInfo { font-size: 14px; color: #333; margin-top: 10px; }
+</style>
+</head>
+<body>
+  <h1>InkQuery - Full Pipeline Test</h1>
+
+  <h2>Step 1: Upload a PDF</h2>
+  <input type="file" id="fileInput" accept="application/pdf" />
+  <br />
+  <button id="uploadBtn">Upload</button>
+  <div id="documentInfo"></div>
+
+  <h2>Step 2: Ask a question about it</h2>
+  <input type="text" id="questionInput" placeholder="e.g. What is this document about?" disabled />
+  <button id="askBtn" disabled>Ask</button>
+
+  <div id="answerBox"></div>
+
+  <script>
+    let currentDocumentId = null;
+
+    document.getElementById('uploadBtn').addEventListener('click', async () => {
+      const fileInput = document.getElementById('fileInput');
+      const documentInfo = document.getElementById('documentInfo');
+
+      if (!fileInput.files.length) {
+        documentInfo.textContent = 'Please choose a PDF file first.';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      documentInfo.textContent = 'Uploading and processing... this can take up to 30 seconds.';
+
+      try {
+        const response = await fetch('http://localhost:5000/api/documents/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await response.json();
+
+        if (data.error) {
+          documentInfo.textContent = 'Error: ' + data.error;
+          return;
+        }
+
+        currentDocumentId = data.documentId;
+        documentInfo.textContent = `Ready! "${data.filename}" - ${data.chunkCount} chunks stored. You can ask questions now.`;
+
+        document.getElementById('questionInput').disabled = false;
+        document.getElementById('askBtn').disabled = false;
+      } catch (err) {
+        documentInfo.textContent = 'Error: ' + err.message + ' (make sure your backend is running)';
+      }
+    });
+
+    document.getElementById('askBtn').addEventListener('click', async () => {
+      const questionInput = document.getElementById('questionInput');
+      const answerBox = document.getElementById('answerBox');
+      const question = questionInput.value.trim();
+
+      if (!question) return;
+      if (!currentDocumentId) {
+        answerBox.innerHTML = '<p>Please upload a document first.</p>';
+        return;
+      }
+
+      answerBox.innerHTML = '<p>Thinking...</p>';
+
+      try {
+        const response = await fetch('http://localhost:5000/api/documents/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documentId: currentDocumentId, question }),
+        });
+        const data = await response.json();
+
+        if (data.error) {
+          answerBox.innerHTML = '<p>Error: ' + data.error + '</p>';
+          return;
+        }
+
+        let html = '<div class="chat-answer"><strong>Answer:</strong><br>' + data.answer + '</div>';
+        if (data.sources && data.sources.length > 0) {
+          html += '<h2>Sources used</h2>';
+          data.sources.forEach((s, i) => {
+            html += `<div class="source"><strong>Chunk ${i + 1}</strong> (similarity: ${s.similarity.toFixed(3)})<br>${s.content}</div>`;
+          });
+        }
+        answerBox.innerHTML = html;
+      } catch (err) {
+        answerBox.innerHTML = '<p>Error: ' + err.message + '</p>';
+      }
+    });
+  </script>
+</body>
+</html>
