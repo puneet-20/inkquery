@@ -144,7 +144,7 @@ router.post('/ask', requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Ask error:', err);
-    res.status(500).json({ error: 'Something went wrong while answering the question.', details: err.message });
+    res.status(500).json({ error: 'The AI service is temporarily busy. Please wait a moment and try again', details: err.message });
   }
 });
 
