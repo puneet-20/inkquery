@@ -8,13 +8,8 @@ import { requireAuth } from '../utils/authMiddleware.js';
 
 const router = express.Router();
 
-// Store the uploaded file in memory (not on disk) since we only need
-// to read its text content, not keep the raw file around.
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Day 2: accept a PDF upload, extract its text.
-// Day 3: chunk the text, embed each chunk, and store everything in Supabase.
-// Day 6: require login, and tie the document to the logged-in user.
 router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -25,7 +20,6 @@ router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Only PDF files are supported right now.' });
     }
 
-    // Step 1: extract text from the PDF
     const parsed = await pdfParse(req.file.buffer);
     const extractedText = parsed.text.trim();
 
@@ -33,7 +27,6 @@ router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Could not find any readable text in this PDF.' });
     }
 
-    // Step 2: create a document record, owned by the logged-in user
     const { data: document, error: docError } = await supabase
       .from('documents')
       .insert({ filename: req.file.originalname, user_id: req.user.id })
@@ -42,11 +35,8 @@ router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
 
     if (docError) throw docError;
 
-    // Step 3: split the text into chunks
     const textChunks = chunkText(extractedText);
 
-    // Step 4: embed each chunk one at a time (sequential, to stay within free-tier rate limits)
-    // and build the rows we'll insert into the chunks table.
     const chunkRows = [];
     for (const chunk of textChunks) {
       const embedding = await embedText(chunk, 'RETRIEVAL_DOCUMENT');
@@ -57,7 +47,6 @@ router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
       });
     }
 
-    // Step 5: store all chunks in one batch insert
     const { error: chunkError } = await supabase.from('chunks').insert(chunkRows);
     if (chunkError) throw chunkError;
 
@@ -71,11 +60,17 @@ router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
     });
   } catch (err) {
     console.error('Upload error:', err);
+
+    if (err?.status === 503) {
+      return res.status(503).json({
+        error: 'The AI service is temporarily busy. Please wait a moment and try uploading again.',
+      });
+    }
+
     res.status(500).json({ error: 'Something went wrong while processing the PDF.', details: err.message });
   }
 });
 
-// Returns the logged-in user's own documents (for a document picker UI later).
 router.get('/', requireAuth, async (req, res) => {
   const { data, error } = await supabase
     .from('documents')
@@ -87,9 +82,6 @@ router.get('/', requireAuth, async (req, res) => {
   res.json({ documents: data });
 });
 
-// Day 4-5: accept a question about a specific document, retrieve the most
-// relevant chunks, and ask Gemini to answer using only that context.
-// Day 6: require login, and make sure the document actually belongs to this user.
 router.post('/ask', requireAuth, async (req, res) => {
   try {
     const { documentId, question } = req.body;
@@ -98,7 +90,6 @@ router.post('/ask', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Please provide both "documentId" and "question".' });
     }
 
-    // Ownership check: make sure this document belongs to the logged-in user
     const { data: document, error: docError } = await supabase
       .from('documents')
       .select('id, user_id')
@@ -113,12 +104,8 @@ router.post('/ask', requireAuth, async (req, res) => {
       return res.status(403).json({ error: "You don't have access to this document." });
     }
 
-    // Step 1: embed the question (using RETRIEVAL_QUERY, since this is a search query,
-    // not a document being stored - Gemini tunes the embedding slightly differently for each)
     const questionEmbedding = await embedText(question, 'RETRIEVAL_QUERY');
 
-    // Step 2: find the most similar chunks in Supabase using the match_chunks function
-    // we defined in supabase_schema.sql (cosine similarity search via pgvector)
     const { data: matches, error: matchError } = await supabase.rpc('match_chunks', {
       query_embedding: questionEmbedding,
       match_document_id: documentId,
@@ -134,7 +121,6 @@ router.post('/ask', requireAuth, async (req, res) => {
       });
     }
 
-    // Step 3: send the question + retrieved chunks to Gemini for a grounded answer
     const contextChunks = matches.map((m) => m.content);
     const answer = await generateAnswer(question, contextChunks);
 
@@ -144,7 +130,14 @@ router.post('/ask', requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Ask error:', err);
-    res.status(500).json({ error: 'The AI service is temporarily busy. Please wait a moment and try again', details: err.message });
+
+    if (err?.status === 503) {
+      return res.status(503).json({
+        error: 'The AI service is temporarily busy. Please wait a moment and try asking again.',
+      });
+    }
+
+    res.status(500).json({ error: 'Something went wrong while answering the question.', details: err.message });
   }
 });
 

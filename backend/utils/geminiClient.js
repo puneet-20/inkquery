@@ -5,25 +5,42 @@ dotenv.config();
 
 export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Model names as of mid-2026. Google occasionally renames/deprecates models,
-// so if these ever 404 again, check https://ai.google.dev/gemini-api/docs/models
 export const EMBEDDING_MODEL = 'gemini-embedding-001';
 export const CHAT_MODEL = 'gemini-flash-latest';
 
-// Turns a piece of text into a 768-number embedding (matches our Supabase schema).
+async function withRetry(fn, { retries = 2, delayMs = 1500 } = {}) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isOverloaded = err?.status === 503;
+      const isLastAttempt = attempt === retries;
+
+      if (!isOverloaded || isLastAttempt) {
+        throw err;
+      }
+
+      console.warn(`Gemini returned 503 (attempt ${attempt + 1}/${retries + 1}), retrying in ${delayMs}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      delayMs *= 2;
+    }
+  }
+}
+
 export async function embedText(text, taskType = 'RETRIEVAL_DOCUMENT') {
-  const response = await ai.models.embedContent({
-    model: EMBEDDING_MODEL,
-    contents: [text],
-    config: {
-      taskType, // 'RETRIEVAL_DOCUMENT' when storing chunks, 'RETRIEVAL_QUERY' when embedding a question
-      outputDimensionality: 768,
-    },
-  });
+  const response = await withRetry(() =>
+    ai.models.embedContent({
+      model: EMBEDDING_MODEL,
+      contents: [text],
+      config: {
+        taskType,
+        outputDimensionality: 768,
+      },
+    })
+  );
   return response.embeddings[0].values;
 }
 
-// Sends the question + retrieved context chunks to Gemini and returns a plain-text answer.
 export async function generateAnswer(question, contextChunks) {
   const context = contextChunks.join('\n\n---\n\n');
 
@@ -37,10 +54,12 @@ Question: ${question}
 
 Answer:`;
 
-  const response = await ai.models.generateContent({
-    model: CHAT_MODEL,
-    contents: prompt,
-  });
+  const response = await withRetry(() =>
+    ai.models.generateContent({
+      model: CHAT_MODEL,
+      contents: prompt,
+    })
+  );
 
   return response.text;
 }
