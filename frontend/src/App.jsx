@@ -3,6 +3,41 @@ import { supabase } from './supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+function QuillIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M20 4c-4.5 0-9.5 2-12.5 5C4 12.5 3 17 3 20c0 .55.45 1 1 1 3 0 7.5-1 11-4.5 3-3 5-8 5-12.5 0-.55-.45-1-1-1Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M11 13 4 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function UploadIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M12 15V4M12 4 8 8M12 4l4 4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -50,34 +85,47 @@ function AuthScreen() {
   return (
     <div className="centered-screen">
       <div className="auth-card">
-        <h1>InkQuery</h1>
+        <div className="brand">
+          <span className="brand-icon">
+            <QuillIcon size={24} />
+          </span>
+          <h1>InkQuery</h1>
+        </div>
         <p className="subtitle">Chat with your documents using AI</p>
 
         <form onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password (6+ characters)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-          />
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              placeholder="6+ characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+            />
+          </div>
           {error && <p className="error-text">{error}</p>}
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Please wait...' : isSignUp ? 'Sign Up' : 'Log In'}
+            {loading ? 'Please wait...' : isSignUp ? 'Sign up' : 'Log in'}
           </button>
         </form>
 
         <p className="auth-toggle">
           {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-          <a onClick={() => setIsSignUp(!isSignUp)}>{isSignUp ? 'Log In' : 'Sign Up'}</a>
+          <a onClick={() => setIsSignUp(!isSignUp)}>{isSignUp ? 'Log in' : 'Sign up'}</a>
         </p>
       </div>
     </div>
@@ -114,7 +162,7 @@ function MainApp({ session }) {
     if (!file) return;
 
     setUploading(true);
-    setUploadStatus(`Processing "${file.name}"... this can take up to 30 seconds.`);
+    setUploadStatus(`Reading "${file.name}"... this can take up to 30 seconds.`);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -150,32 +198,46 @@ function MainApp({ session }) {
     <div className="app-shell">
       <div className="sidebar">
         <div className="sidebar-header">
-          <h2>InkQuery</h2>
+          <div className="brand-mark">
+            <span className="brand-icon">
+              <QuillIcon size={18} />
+            </span>
+            <h2>InkQuery</h2>
+          </div>
           <button className="logout-link" onClick={handleLogout}>
             Log out
           </button>
         </div>
 
-        <div className="upload-zone">
+        <label className="upload-zone" htmlFor="pdf-upload">
           <input
             ref={fileInputRef}
+            id="pdf-upload"
+            className="upload-input"
             type="file"
             accept="application/pdf"
             onChange={handleUpload}
             disabled={uploading}
           />
-          {uploadStatus && <p className="status-text">{uploadStatus}</p>}
-        </div>
+          <span className="upload-icon">
+            <UploadIcon />
+          </span>
+          <span className="upload-label">{uploading ? 'Reading...' : 'Add a document'}</span>
+          <span className="upload-hint">PDF, up to a few MB</span>
+        </label>
+        {uploadStatus && <p className="status-text">{uploadStatus}</p>}
 
         <div className="doc-list">
-          {documents.length === 0 && <p className="status-text">No documents yet. Upload a PDF to get started.</p>}
+          {documents.length === 0 && (
+            <p className="status-text">Your shelf is empty. Add a PDF to start a conversation.</p>
+          )}
           {documents.map((doc) => (
             <div
               key={doc.id}
               className={`doc-item ${selectedDoc?.id === doc.id ? 'active' : ''}`}
               onClick={() => setSelectedDoc(doc)}
             >
-              <div>{doc.filename}</div>
+              <div className="doc-title">{doc.filename}</div>
               <div className="doc-date">{new Date(doc.created_at).toLocaleDateString()}</div>
             </div>
           ))}
@@ -186,7 +248,7 @@ function MainApp({ session }) {
         <ChatPanel key={selectedDoc.id} document={selectedDoc} token={token} />
       ) : (
         <div className="chat-area">
-          <div className="chat-empty">Select a document, or upload a new PDF to start chatting.</div>
+          <div className="chat-empty">Open a document from the shelf, or add a new one to begin.</div>
         </div>
       )}
     </div>
@@ -240,7 +302,7 @@ function ChatPanel({ document, token }) {
 
   return (
     <div className="chat-area">
-      <h2 style={{ fontSize: '16px', margin: '0 0 10px' }}>{document.filename}</h2>
+      <h2 className="chat-title">{document.filename}</h2>
 
       <div className="chat-messages">
         {messages.length === 0 && (
@@ -284,10 +346,12 @@ function MessageBubble({ message }) {
           {showSources && (
             <div className="sources-list">
               {message.sources.map((s, i) => (
-                <div key={i} style={{ marginBottom: '6px' }}>
-                  <strong>Chunk {i + 1}</strong> (similarity: {s.similarity.toFixed(3)})
-                  <br />
-                  {s.content}
+                <div className="source-note" key={i}>
+                  <span className="source-index">{i + 1}.</span>
+                  <span>
+                    {s.content}{' '}
+                    <span className="source-similarity">(similarity {s.similarity.toFixed(3)})</span>
+                  </span>
                 </div>
               ))}
             </div>
