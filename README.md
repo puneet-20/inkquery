@@ -55,7 +55,6 @@ npm install
 cp .env.example .env   # then fill in your Supabase + backend API URL
 npm run dev
 ```
-Visit `http://localhost:5173` to use the app.
 
 ## Known Limitations
 - Text chunking currently has no overlap between chunks, which can occasionally affect retrieval quality right at chunk boundaries
