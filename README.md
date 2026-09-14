@@ -3,7 +3,12 @@
 A full-stack RAG (Retrieval-Augmented Generation) application that lets users upload a PDF and ask questions about it in natural language, getting answers grounded in the document's actual content.
 
 ## Status
-🚧 In progress — building day by day. See progress log below.
+✅ Deployed and live — see the demo link below.
+
+## Live Demo
+Try it here: **[https://inkquery-nine.vercel.app](https://inkquery-nine.vercel.app)**
+
+Note: the backend runs on Render's free tier, so the first request after a period of inactivity may take 30-50 seconds to respond (cold start).
 
 ## Tech Stack
 - **Frontend:** React (Vite)
@@ -26,9 +31,9 @@ A full-stack RAG (Retrieval-Augmented Generation) application that lets users up
 - [x] Day 2: PDF upload + text extraction
 - [x] Day 3: Chunking + embeddings + storage in Supabase
 - [x] Day 4: Similarity search / retrieval
-- [x] Day 5: GPT answer generation + chat UI
+- [x] Day 5: Gemini answer generation + chat UI
 - [x] Day 6: Auth + polish
-- [ ] Day 7: Deployment
+- [x] Day 7: Deployment (backend on Render, frontend on Vercel) + Gemini 503 retry handling + database security hardening (RLS on all tables)
 
 ## Local Setup
 
@@ -39,10 +44,9 @@ npm install
 cp .env.example .env   # then fill in your real Supabase + Gemini keys
 npm run dev
 ```
-Visit `http://localhost:5000/health` to confirm it's running.
 
 ### Database
-Run `backend/supabase_schema.sql` in your Supabase project's SQL Editor to set up tables and the vector search function.
+Run `backend/supabase_schema.sql` in your Supabase project's SQL Editor to set up tables, Row Level Security policies, and the vector search function.
 
 ### Frontend
 ```bash
@@ -53,8 +57,13 @@ npm run dev
 ```
 Visit `http://localhost:5173` to use the app.
 
+## Known Limitations
+- Text chunking currently has no overlap between chunks, which can occasionally affect retrieval quality right at chunk boundaries
+- No file size limit is currently enforced on PDF uploads
+- Backend runs on Render's free tier, so it spins down when idle and the first request afterward is slow (cold start)
+
 ## Planned future improvements
 - Multi-document support
-- Smarter, sentence-aware chunking
+- Smarter, sentence-aware chunking with overlap
 - Streaming answers
 - Result re-ranking
