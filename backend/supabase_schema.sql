@@ -4,13 +4,9 @@
 create extension if not exists vector;
 
 -- 2. Table to store uploaded documents
--- user_id is nullable for now to allow old test rows without a real user.
--- Once you've cleared out test data, you can run:
---   alter table documents alter column user_id set not null;
--- to fully enforce ownership.
 create table documents (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id),
+  user_id uuid references auth.users(id) not null,
   filename text not null,
   created_at timestamp with time zone default now()
 );
@@ -56,3 +52,15 @@ create policy "Users can view their own documents"
 create policy "Users can insert their own documents"
   on documents for insert
   with check (auth.uid() = user_id);
+
+-- 6. Row Level Security so users can only see chunks belonging to their own documents
+alter table chunks enable row level security;
+create policy "Users can view chunks of their own documents"
+  on chunks for select
+  using (
+    exists (
+      select 1 from documents
+      where documents.id = chunks.document_id
+      and documents.user_id = auth.uid()
+    )
+  );
