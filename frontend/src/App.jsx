@@ -223,7 +223,7 @@ function MainApp({ session }) {
             <UploadIcon />
           </span>
           <span className="upload-label">{uploading ? 'Reading...' : 'Add a document'}</span>
-          <span className="upload-hint">PDF, up to a few MB</span>
+          <span className="upload-hint">PDF, up to 8 MB</span>
         </label>
         {uploadStatus && <p className="status-text">{uploadStatus}</p>}
 
